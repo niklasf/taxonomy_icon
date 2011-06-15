@@ -1,0 +1,21 @@
+<?php
+
+/**
+ * Implements hook_install().
+ */
+function taxonomy_icon_install() {
+  field_create_field(array(
+    'field_name' => 'taxonomy_icon',
+    'type' => 'image',
+    'cardinality' => 1,
+    'translatable' => TRUE,
+    'entity_types' => array('taxonomy_term'),
+  ));
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function taxonomy_icon_uninstall() {
+  field_delete_field('taxonomy_icon');
+}

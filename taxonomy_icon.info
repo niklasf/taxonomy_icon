@@ -1,0 +1,6 @@
+name = Taxonomy Icon
+description = "Allows you to display icons instead of taxonomy term names"
+core = 7.x
+package = Fields
+dependencies[] = taxonomy
+dependencies[] = image

@@ -1,0 +1,137 @@
+<?php
+
+/**
+ * Implement hook_field_formatter_info().
+ */
+function taxonomy_icon_field_formatter_info() {
+  return array(
+    'taxonomy_icon_term_reference_icon' => array(
+      'label' => t('Icon'),
+      'field types' => array('taxonomy_term_reference'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_field_formatter_view().
+ */
+function taxonomy_icon_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, $items, $display) {
+  $element = array();
+
+  switch ($display['type']) {
+  case 'taxonomy_icon_term_reference_icon':
+    foreach ($items as $delta => $item) {
+      if ($item['tid'] == 'autocreate') {
+        $element[$delta] = array(
+          '#markup' => check_plain($item['name']),
+        );
+      } else {
+        $term = $item['taxonomy_term'];
+        $alt = $title = $term->name;
+
+        $image = FALSE;
+        if (!empty($term->taxonomy_icon)) {
+          if (!empty($term->taxonomy_icon[$langcode])) {
+            $image = reset($term->taxonomy_icon[$langcode]);
+          } else if (!empty($term->taxonomy_icon[LANGUAGE_NONE])) {
+            $image = reset($term->taxonomy_icon[LANGUAGE_NONE]);
+          }
+        }
+
+        $uri = entity_uri('taxonomy_term', $term);
+
+        if ($image) {
+          $element[$delta] = array(
+            '#type' => 'link',
+            '#title' =>
+              '<img' . drupal_attributes(array(
+                'src' => render(file_create_url($image['uri'])),
+                'alt' => !empty($image['alt']) ? $image['alt'] : $alt,
+              )) . ' />',
+            '#href' => $uri['path'],
+            '#options' => array(
+              'html' => TRUE,
+              'attributes' => array(
+                'title' => !empty($image['title']) ? $image['title'] : $title,
+              ),
+            ) + $uri['options'],
+          );
+        } else {
+          $element[$delta] = array(
+            '#type' => 'link',
+            '#title' => $term->name,
+            '#href' => $uri['path'],
+            '#options' => $uri['options'],
+          );
+        }
+      };
+    }
+    break;
+  }
+
+  return $element;
+}
+
+/**
+ * Implements hook_field_formatter_prepare_view().
+ */
+function taxonomy_icon_field_formatter_prepare_view($entity_type, $entities, $field, $instances, $langcode, &$items, $displays) {
+  return taxonomy_field_formatter_prepare_view($entity_type, $entities, $field, $instances, $langcode, $items, $displays);
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function taxonomy_icon_form_field_ui_display_overview_form_alter(&$form, &$form_state, $form_id) {
+  $form['#submit'][] = 'taxonomy_icon_display_overview_form_submit';
+}
+
+/**
+ * FAPI Submit handler for the field ui display overview form.
+ *
+ * Attaches the taxonomy_icon field to vocabulary terms, if the Icon formatter
+ * is selected and teh taxonomy_icon field hasn't been instaciated for the
+ * vocabulary yet.
+ */
+function taxonomy_icon_display_overview_form_submit(&$form, &$form_state) {
+  foreach ($form['#fields'] as $field_name) {
+    $field_info = field_info_field($field_name);
+    if ($field_info['type'] == 'taxonomy_term_reference') {
+      if ($form_state['values']['fields'][$field_name]['type'] == 'taxonomy_icon_term_reference_icon') {
+        $allowed_values = $vocabulary = reset($field_info['settings']['allowed_values']);
+        $vocabulary = $allowed_values['vocabulary'];
+        $icon_instance = field_info_instance('taxonomy_term', 'taxonomy_icon', $vocabulary);
+
+        if (!$icon_instance) {
+          field_create_instance(array(
+            'field_name' => 'taxonomy_icon',
+            'entity_type' => 'taxonomy_term',
+            'label' => 'Icon',
+            'bundle' => $vocabulary,
+            'description' => t('The icon of this term.'),
+            'required' => FALSE,
+
+            'widget' => array(
+              'type' => 'image_image',
+            ),
+          ));
+
+          $field_settings_url = 'admin/structure/taxonomy/' . $vocabulary . '/fields/taxonomy_icon';
+          drupal_set_message(t('An image field has been attached to the vocabulary terms, that represents the icon. You can adjust the !field_settings', array('!field_settings' => l('field settings', $field_settings_url))));
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ *
+ * Cardinality of taxonomy_icon is always 1. Prevent the user from changing
+ * that by disabling the form element.
+ */
+function taxonomy_icon_form_field_ui_field_edit_form_alter(&$form, &$form_state, $form_id) {
+  if ($form['#field']['field_name'] == 'taxonomy_icon') {
+    $form['field']['cardinality']['#disabled'] = TRUE;
+  }
+}
