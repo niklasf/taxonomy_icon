@@ -45,7 +45,7 @@ function taxonomy_icon_field_formatter_view($entity_type, $entity, $field, $inst
             '#type' => 'link',
             '#title' =>
               '<img' . drupal_attributes(array(
-                'src' => render(file_create_url($image['uri'])),
+                'src' => file_create_url($image['uri']),
                 'alt' => !empty($image['alt']) ? $image['alt'] : $alt,
               )) . ' />',
             '#href' => $uri['path'],
