@@ -8,6 +8,9 @@ function taxonomy_icon_field_formatter_info() {
     'taxonomy_icon_term_reference_icon' => array(
       'label' => t('Icon'),
       'field types' => array('taxonomy_term_reference'),
+      'settings' => array(
+        'linked' => TRUE,
+      ),
     ),
   );
 }
@@ -41,28 +44,43 @@ function taxonomy_icon_field_formatter_view($entity_type, $entity, $field, $inst
         $uri = entity_uri('taxonomy_term', $term);
 
         if ($image) {
-          $element[$delta] = array(
-            '#type' => 'link',
-            '#title' =>
-              '<img' . drupal_attributes(array(
-                'src' => file_create_url($image['uri']),
-                'alt' => !empty($image['alt']) ? $image['alt'] : $alt,
-              )) . ' />',
-            '#href' => $uri['path'],
-            '#options' => array(
-              'html' => TRUE,
-              'attributes' => array(
-                'title' => !empty($image['title']) ? $image['title'] : $title,
-              ),
-            ) + $uri['options'],
-          );
+          $image =
+            '<img' . drupal_attributes(array(
+              'src' => file_create_url($image['uri']),
+              'alt' => !empty($image['alt']) ? $image['alt'] : $alt,
+              'title' => !empty($image['title']) ? $image['title'] : $title,
+            )) . ' />';
+          
+          if (empty($display['settings']['linked'])) {
+            $element[$delta] = array(
+              '#markup' => $image,
+            );
+          } else {
+            $element[$delta] = array(
+              '#type' => 'link',
+              '#title' => $image,
+              '#href' => $uri['path'],
+              '#options' => array(
+                'html' => TRUE,
+                'attributes' => array(
+                  'title' => !empty($image['title']) ? $image['title'] : $title,
+                ),
+              ) + $uri['options'],
+            );
+          }
         } else {
-          $element[$delta] = array(
-            '#type' => 'link',
-            '#title' => $term->name,
-            '#href' => $uri['path'],
-            '#options' => $uri['options'],
-          );
+          if (empty($display['settings']['linked'])) {
+            $element[$delta] = array(
+              '#markup' => check_plain($term->name),
+            );
+          } else {
+            $element[$delta] = array(
+              '#type' => 'link',
+              '#title' => $term->name,
+              '#href' => $uri['path'],
+              '#options' => $uri['options'],
+            );
+          }
         }
       };
     }
@@ -70,6 +88,38 @@ function taxonomy_icon_field_formatter_view($entity_type, $entity, $field, $inst
   }
 
   return $element;
+}
+
+/**
+ * Implements hook_field_formatter_settings_summary().
+ */
+function taxonomy_icon_field_formatter_settings_summary($field, $instance, $view_mode) {
+  $display = $instance['display'][$view_mode];
+
+  if ($display['type'] == 'taxonomy_icon_term_reference_icon') {
+    if (empty($display['settings']['linked'])) {
+      return t('Icon <em>not linked</em> to the term page');
+    } else {
+      return t('Icon <em>linked</em> to the term page');
+    }
+  }
+}
+
+/**
+ * Implements hook_field_formatter_settings_form().
+ */
+function taxonomy_icon_field_formatter_settings_form($field, $instance, $view_mode, $form, &$form_state) {
+  $display = $instance['display'][$view_mode];
+
+  if ($display['type'] == 'taxonomy_icon_term_reference_icon') {
+    return array(
+      'linked' => array(
+        '#title' => t('Link to term page'),
+        '#type' => 'checkbox',
+        '#default_value' => $display['settings']['linked'],
+      ),
+    );
+  }
 }
 
 /**
